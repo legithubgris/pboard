@@ -1,14 +1,18 @@
 import os
+import platform  # Add platform import
 from pedalboard import Pedalboard, load_plugin
 from pedalboard.io import AudioFile
 from mido import Message  # not part of Pedalboard, but convenient!
 
-# Load a VST3 or Audio Unit plugin from a known path on disk:
-instrument = load_plugin("C:/Program Files/Steinberg/VstPlugins/blocks.vst3/Contents/x86_64-win/blocks.vst3")
-assert instrument.is_instrument
+# Get the path of the assets folder relative to the script
+assets_folder = os.path.join(os.path.dirname(__file__), 'assets')
 
-# Set a specific instrument within the VST plugin by loading a preset
-instrument.load_preset("C:/Users/dburbano/Documents/VST3 Presets/soonth/blocks/snare0.vstpreset")
+# Load a VST3 or Audio Unit plugin(s) from the assets folder
+instrument1 = load_plugin(os.path.join(assets_folder, 'blocks.vst3/Contents/x86_64-win/blocks.vst3'))
+assert instrument1.is_instrument
+
+# Set a specific instrument within the VST plugin by loading a preset from the assets folder
+instrument1.load_preset(os.path.join(assets_folder, 'snare0.vstpreset'))
 
 # Make a plain old pedalboard with no effects:
 board = Pedalboard()
@@ -19,7 +23,7 @@ midi_messages = [
     Message("note_on", note=60, velocity=64, time=0),
     Message("note_off", note=60, velocity=0, time=.1)
 ]
-audio = instrument(midi_messages, duration=.2, sample_rate=sample_rate)
+audio = instrument1(midi_messages, duration=.2, sample_rate=sample_rate)  # Fix instrument name
 
 # Apply effects to this audio (if any):
 effected = board(audio, sample_rate)
@@ -33,7 +37,13 @@ with AudioFile(output_file_path, 'w', sample_rate, effected.shape[0], bit_depth=
 
 print("Audio processing complete. Output saved as 'output.wav'.")
 
-# Open the folder containing the output file in Windows Explorer
 output_folder = os.path.dirname(os.path.abspath(output_file_path))
-os.startfile(output_folder)
 
+if platform.system() == "Windows":
+    os.startfile(output_folder)
+elif platform.system() == "Darwin":
+    os.system(f"open {output_folder}")
+else:
+    print("Unsupported operating system. Cannot open file explorer.")
+
+input("Press Enter to close the window")

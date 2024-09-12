@@ -1,31 +1,31 @@
 import os
+import platform
 from pedalboard import Pedalboard, load_plugin
 from pedalboard.io import AudioFile
 from mido import MidiFile, Message
 
-# Load a VST3 or Audio Unit plugin(s) from a known path on disk:
-instrument1 = load_plugin("C:/Program Files/Steinberg/VstPlugins/blocks.vst3/Contents/x86_64-win/blocks.vst3")
+# Get the path of the assets folder relative to the script
+assets_folder = os.path.join(os.path.dirname(__file__), 'assets')
+
+# Load a VST3 or Audio Unit plugin(s) from the assets folder
+instrument1 = load_plugin(os.path.join(assets_folder, 'blocks.vst3/Contents/x86_64-win/blocks.vst3'))
 assert instrument1.is_instrument
 
-instrument2 = load_plugin("C:/Program Files/Steinberg/VstPlugins/blocks.vst3/Contents/x86_64-win/blocks.vst3")
+instrument2 = load_plugin(os.path.join(assets_folder, 'blocks.vst3/Contents/x86_64-win/blocks.vst3'))
 assert instrument2.is_instrument
 
-instrument3 = load_plugin("C:/Program Files/Steinberg/VstPlugins/blocks.vst3/Contents/x86_64-win/blocks.vst3")
+instrument3 = load_plugin(os.path.join(assets_folder, 'blocks.vst3/Contents/x86_64-win/blocks.vst3'))
 assert instrument3.is_instrument
 
-# Set a specific instrument within the VST plugin by loading a preset
-instrument1.load_preset("C:/Users/dburbano/Documents/VST3 Presets/soonth/blocks/clappy.vstpreset")
-instrument2.load_preset("C:/Users/dburbano/Documents/VST3 Presets/soonth/blocks/snare0.vstpreset")
-instrument3.load_preset("C:/Users/dburbano/Documents/VST3 Presets/soonth/blocks/kicky.vstpreset")
+# Set a specific instrument within the VST plugin by loading a preset from the assets folder
+instrument1.load_preset(os.path.join(assets_folder, 'clappy.vstpreset'))
+instrument2.load_preset(os.path.join(assets_folder, 'snare0.vstpreset'))
+instrument3.load_preset(os.path.join(assets_folder, 'kicky.vstpreset'))
 
-# Make a plain old pedalboard with no effects:
+# Rest of the code remains unchanged
 board = Pedalboard()
-
-# Read the MIDI file
-midi_file_path = 'C:/pyScripts/pedalBoard/OpenSaurceVSTTest.mid'
+midi_file_path = os.path.join(assets_folder, 'OpenSaurceVSTTest.mid')
 midi = MidiFile(midi_file_path)
-
-# Render audio for each track and combine
 sample_rate = 44100
 combined_audio = None
 
@@ -38,25 +38,28 @@ for i, track in enumerate(midi.tracks, start=0):
     elif i == 3:
         audio = instrument3(midi_messages, duration=midi.length, sample_rate=sample_rate)
     else:
-        continue  # Skip any additional tracks
+        continue
 
     if combined_audio is None:
         combined_audio = audio
     else:
         combined_audio += audio
 
-# Apply effects to this audio (if any):
 effected = board(combined_audio, sample_rate)
-
-# Define the output file path
 output_file_path = 'output.wav'
 
-# Open an audio file to write to:
 with AudioFile(output_file_path, 'w', sample_rate, effected.shape[0], bit_depth=16) as o:
     o.write(effected)
 
 print("Audio processing complete. Output saved as 'output.wav'.")
 
-# Open the folder containing the output file in Windows Explorer
 output_folder = os.path.dirname(os.path.abspath(output_file_path))
-os.startfile(output_folder)
+
+if platform.system() == "Windows":
+    os.startfile(output_folder)
+elif platform.system() == "Darwin":
+    os.system(f"open {output_folder}")
+else:
+    print("Unsupported operating system. Cannot open file explorer.")
+
+input("Press Enter to close the window")
